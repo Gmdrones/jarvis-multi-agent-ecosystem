@@ -144,6 +144,30 @@ To run the included tests:
 python -m unittest discover -s tests -v
 ```
 
+## 🖥️ Multi-account AI workspaces via Remote Desktop Commander
+
+JARVIS is designed to coordinate **user-authorized desktop sessions** across tools such as **Google Antigravity, Claude, Codex, ChatGPT and other compatible desktop or browser applications**.
+
+### Why use desktop interaction instead of an API?
+
+A traditional API integration sends requests to a provider's API and may incur separate token-based charges. With a desktop-control MCP server, an approved agent can instead interact with the **existing graphical interface** of a tool that the user has already signed into. This can avoid **additional API charges for that particular interaction** when no API request is made by the JARVIS integration.
+
+**It does not mean free or unlimited AI.** Provider subscriptions, app usage limits, message quotas, fair-use rules and service-specific charges still apply. Remote Desktop Commander is a computer-control transport, not a free inference provider.
+
+### Multiple accounts and profiles
+
+Users may maintain separate, legitimately owned or authorized accounts and browser profiles for different workspaces, subject to each provider's terms. JARVIS should:
+
+1. Let users explicitly select an authorized account/profile and provider.
+2. Keep credentials and sessions managed by the provider's normal login flow.
+3. Request permission before sensitive desktop operations.
+4. Log the chosen tool and outcome without storing passwords or session tokens.
+5. Respect provider limits and never automatically rotate accounts to evade quotas or restrictions.
+
+**Implementation status:** this is a proposed integration pattern, **not a currently working account switcher or automatic multi-provider orchestration feature**. MCP pairing and actual UI automation must be configured and tested separately.
+
+See [Remote Desktop Commander MCP](docs/REMOTE_DESKTOP.md) and [Security](docs/SEGURANCA.md).
+
 ## 🛡️ Privacy by design
 
 This public project includes **no personal memories, real client records, private project files, account credentials, authentication tokens, pairing links or private Obsidian vaults**.
