@@ -23,3 +23,10 @@ Hunter → Qualificador → Propostas (duplicar config e gerar print/link) → P
 
 ## Limites
 Este projeto não implementa backend, envio real de WhatsApp ou cadastro de agendamentos. Não usa serviços pagos.
+
+## Agendamento para estética, pet shop e clínicas
+Os três presets incluem serviço, data e horário. Quando `phone` em `config.js` estiver preenchido com **número WhatsApp autorizado em formato internacional (ex.: 55 + DDD + número)**, a solicitação abre uma conversa via `wa.me` com mensagem pré-preenchida; **o cliente ainda precisa apertar Enviar**. Sem número, o formulário apenas simula a solicitação, sem transmitir dados. O WhatsApp não confirma automaticamente uma reserva.
+
+**Integração Google Agenda (próxima etapa, após contratação):** conectar o Google Calendar do estabelecimento por OAuth, backend seguro e API; consultar disponibilidade real, criar eventos, impedir sobreposição, administrar fuso horário e cancelamentos e receber notificações de alterações. Não incluir credenciais ou tokens no repositório. Não existe sincronização ativa com Google Agenda nesta versão estática.
+
+Para agendamentos de saúde, minimizar dados pessoais e evitar qualquer informação médica sensível no texto do WhatsApp; validar consentimento, privacidade e controles de acesso na implementação definitiva.
