@@ -88,6 +88,22 @@ def evidence_preflight(candidate):
   elif isinstance(value,list):
    for v in value:walk(v)
  walk(candidate.get('presence_audit',{}))
+ import unicodedata
+ def qnorm(v):return re.sub(r'[^a-z0-9]+',' ',''.join(c for c in unicodedata.normalize('NFKD',str(v)).lower() if not unicodedata.combining(c))).strip()
+ for row in candidate.get('presence_audit',{}).get('name_searches',[]):
+  evidence=row.get('evidence',{});p=Path(evidence.get('file',''));p=p if p.is_absolute() else ROOT/p
+  actual=[]
+  if p.suffix=='.json':
+   data=json.loads(p.read_text(encoding='utf8'))
+   if data.get('tool')=='search_service_web_run.system1_search_query' and data.get('original_response'):actual=data.get('queries',[])
+  else:
+   meta=p.with_suffix('.json')
+   if meta.is_file():
+    data=json.loads(meta.read_text(encoding='utf8'));u=urllib.parse.urlsplit(data.get('requested_url',''));params=urllib.parse.parse_qs(u.query)
+    actual=params.get('q',[]) or params.get('query',[])
+    if not actual and '/maps/search/' in u.path:actual=[urllib.parse.unquote_plus(u.path.split('/maps/search/',1)[1].strip('/'))]
+  if qnorm(row.get('query','')) not in [qnorm(q) for q in actual]:raise ValueError('SEARCH_QUERY_NOT_EXECUTED_AS_CLAIMED: '+str(row.get('purpose')))
+
 
 def qualify(job,dest):
  candidate=json.loads(path(job['candidate']).read_text(encoding='utf-8-sig'))
@@ -214,6 +230,22 @@ def run_job(job,dest):
  kind=job.get('kind');slug(job['job_id'])
  if kind.startswith('CAPTURE_'):
   if not isinstance(job.get('urls'),list) or not 1<=len(job['urls'])<=6:raise ValueError('1_TO_6_URLS_REQUIRED')
+ if kind=='INIT_SITE':
+  site=path(job['site']);base=B/'sites/studio-962-real-v3'
+  if not site.is_relative_to((B/'sites').resolve()) or site.name.startswith('studio-962'):raise ValueError('NEW_SITE_ONLY')
+  site.mkdir(parents=True,exist_ok=True);(site/'src').mkdir(exist_ok=True);copied=[]
+  for name in ['package.json','package-lock.json','postcss.config.js','tsconfig.json','vite.config.ts','tailwind.config.js','index.html']:
+   if not (site/name).exists():shutil.copy2(base/name,site/name);copied.append(name)
+  if not (site/'node_modules').exists():
+   import _winapi
+   _winapi.CreateJunction(str(base/'node_modules'),str(site/'node_modules'))
+  return {'site':str(site),'copied_approved_tooling_only':copied,'source_not_cloned':True}
+ if kind=='PRIORITY_HANDOFF':
+  names={'creator':(CREATOR,'JARVIS Criador de Sites'),'hunter':(HUNTER,'JARVIS - Renda Hunter'),'reviewer':(REVIEWER,'JARVIS - SENTINELA')}
+  tid,name=names[job['target']];message=path(job['message_file']).read_text(encoding='utf8');reply=tell(tid,message)
+  try:raw=cli('ask',name,'--raw',r'\em')
+  except Exception as e:raw='PRIORITY_KEY_UNAVAILABLE: '+str(e)
+  return {'dispatch':reply,'priority_result':raw[-300:],'no_process_restart':True}
  if kind=='CAPTURE_PUBLIC':return capture_public(job,dest)
  if kind=='CAPTURE_INSTAGRAM':return capture_instagram(job,dest)
  if kind=='QUALIFY':return qualify(job,dest)
