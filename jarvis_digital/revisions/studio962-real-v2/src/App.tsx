@@ -1,0 +1,27 @@
+import {useEffect,useState} from 'react';
+import {ArrowUpRight,Menu,X,MapPin} from 'lucide-react';
+import {COMPANY_DATA as C} from './data';
+const posts=[
+ {id:'DeUW2npkfrx',kind:'p',title:'Maquiagem',credit:'Publicação de @studio962.of · trabalho creditado a @rogermakeupart'},
+ {id:'DfFwV_Zv2AM',kind:'reel',title:'Mechas em movimento',credit:'Reel de @studio962.of · trabalho creditado a @lucas_rufiino'},
+ {id:'Dd61KmhFXCc',kind:'p',title:'Nails',credit:'Publicação de @studio962.of com @andreiamanicurerj'}
+];
+function Embed({post,hero=false}:{post:typeof posts[number],hero?:boolean}){
+ const url='https://www.instagram.com/'+post.kind+'/'+post.id+'/';
+ return <article className={'real-post '+(hero?'hero-post':'')}><div className="embed-wrap"><blockquote className="instagram-media" data-instgrm-permalink={url} data-instgrm-version="14"><a href={url} target="_blank" rel="noreferrer">Ver {post.title} no Instagram</a></blockquote></div><div className="media-caption"><span>{post.title}</span><a href={url} target="_blank" rel="noreferrer">Ver original <ArrowUpRight size={15}/></a><p>{post.credit}</p></div></article>
+}
+export default function App(){
+ const [menu,setMenu]=useState(false);
+ useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==='Escape')setMenu(false)};window.addEventListener('keydown',close);
+ const script=document.createElement('script');script.src='https://www.instagram.com/embed.js';script.async=true;document.body.appendChild(script);
+ return()=>{window.removeEventListener('keydown',close);script.remove()}},[]);
+ return <><a className="skip" href="#conteudo">Pular para o conteúdo</a>
+ <div className="demo-bar">Demonstração não oficial · versão em revisão <span>Jarvis Digital</span></div>
+ <header className="header"><a className="wordmark" href="#inicio">STUDIO <b>962</b><small>ESPLANADA DA BARRA</small></a><nav className="desktop-nav" aria-label="Navegação principal"><a href="#trabalhos">Trabalhos reais</a><a href="#servicos">Serviços</a><a href="#contato">Localização</a></nav><a className="header-cta" href={C.whatsappUrl} target="_blank" rel="noreferrer">Agende seu momento <ArrowUpRight size={16}/></a><button className="menu-toggle" aria-label={menu?'Fechar menu':'Abrir menu'} aria-expanded={menu} aria-controls="mobile-nav" onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button></header>
+ {menu&&<nav id="mobile-nav" className="mobile-nav">{[['Trabalhos reais','#trabalhos'],['Serviços','#servicos'],['Localização','#contato']].map(([label,url])=><a key={url} href={url} onClick={()=>setMenu(false)}>{label}<ArrowUpRight/></a>)}</nav>}
+ <main id="conteudo"><section id="inicio" className="real-hero"><div className="real-hero-copy"><p className="eyebrow">MEGA HAIR · COR · BELEZA</p><h1>Beleza com<br/><em>identidade.</em></h1><p className="intro">O trabalho do Studio 962,<br/>pelas mãos de quem faz acontecer.</p><a className="button light" href={C.whatsappUrl} target="_blank" rel="noreferrer">Converse com o Studio <ArrowUpRight size={19}/></a><a className="hero-scroll" href="#trabalhos">DESCUBRA OS TRABALHOS ↓</a><span className="hero-location">BARRA DA TIJUCA, RIO DE JANEIRO</span></div><Embed post={posts[0]} hero/></section>
+ <section id="trabalhos" className="real-gallery section-pad"><div className="section-label"><span>01 — A BELEZA ACONTECE AQUI</span><span>@STUDIO962.OF</span></div><div className="gallery-heading"><h2>Trabalhos reais.<br/><em>Em cada detalhe.</em></h2><p>Fotos e vídeos publicados no perfil do Studio. Dê play para assistir aos vídeos, ou abra cada publicação original.</p></div><div className="real-grid">{posts.slice(1).map(post=><Embed key={post.id} post={post}/>)}</div><p className="external-note">Publicações incorporadas do Instagram, com autoria preservada. A reprodução depende da disponibilidade do Instagram.</p></section>
+ <section id="servicos" className="real-services section-pad"><p className="eyebrow">02 — ESCOLHA SEU MOMENTO</p><h2>Uma expressão<br/><em>só sua.</em></h2><div className="service-rows">{['Corte & coloração','Mega hair','Manicure','Barbearia'].map((s,i)=><a href={C.whatsappUrl} target="_blank" rel="noreferrer" key={s}><small>0{i+1}</small><h3>{s}</h3><span>Consultar atendimento <ArrowUpRight size={20}/></span></a>)}</div></section>
+ <section id="contato" className="contact section-pad"><div className="section-label"><span>03 — O SEU PRÓXIMO MOMENTO</span><span>ESPLANADA DA BARRA</span></div><div className="contact-grid"><div><p className="eyebrow">STUDIO 962</p><h2>Encontre<br/><em>seu Studio.</em></h2><a className="button dark" href={C.whatsappUrl} target="_blank" rel="noreferrer">Consultar pelo WhatsApp <ArrowUpRight size={19}/></a></div><div className="address"><MapPin size={25}/><h3>Esplanada da Barra</h3><p>{C.address}<br/>Barra da Tijuca · Rio de Janeiro, RJ<br/>CEP 22631-003</p><a className="text-link" href={C.mapsUrl} target="_blank" rel="noreferrer">Como chegar <ArrowUpRight size={17}/></a><div className="contact-phone"><small>CONTATO DO STUDIO</small><a href={'tel:+'+C.phoneRaw}>{C.phoneDisplay}</a><p>Valores e disponibilidade: consulte a equipe.</p></div></div></div></section></main>
+ <footer><a className="wordmark" href="#inicio">STUDIO <b>962</b></a><div><p>Demonstração não oficial por Jarvis Digital · em revisão.</p><p>Fotos e vídeos exibidos pelas incorporações do perfil público. Sem vínculo comercial anunciado com a empresa.</p></div><a href={C.instagramUrl} target="_blank" rel="noreferrer">INSTAGRAM ↗</a></footer></>;
+}
