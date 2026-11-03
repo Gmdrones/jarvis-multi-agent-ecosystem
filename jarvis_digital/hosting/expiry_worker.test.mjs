@@ -11,7 +11,7 @@ const registry = {
 const fetchDemo = createFetch(registry,()=>now);
 const env = {ASSETS:{fetch:async(req)=>new Response(new URL(req.url).pathname,{status:200})}};
 const call = (path,method='GET')=>fetchDemo(new Request('https://jarvis-digital.pages.dev'+path,{method}),env);
-test('active demo resolves individual slug and noindex headers',async()=>{const r=await call('/active');assert.equal(r.status,200);assert.equal(await r.text(),'/active/index.html');assert.match(r.headers.get('X-Robots-Tag'),/noindex/);assert.equal(r.headers.get('Cache-Control'),'no-store');});
+test('active demo resolves individual slug and noindex headers',async()=>{const r=await call('/active/');assert.equal(r.status,200);assert.equal(await r.text(),'/active/');assert.match(r.headers.get('X-Robots-Tag'),/noindex/);assert.equal(r.headers.get('Cache-Control'),'no-store');});
 test('expired demo blocked server-side',async()=>assert.equal((await call('/expired')).status,410));
 test('disabled demo blocked',async()=>assert.equal((await call('/disabled')).status,410));
 test('invalid expiration fails closed',async()=>assert.equal((await call('/invalid')).status,410));
@@ -21,3 +21,5 @@ test('state-changing methods blocked',async()=>assert.equal((await call('/active
 test('only compiled allowlisted asset paths accepted',async()=>{const r=await call('/active/assets/app.js');assert.equal(r.status,200);assert.equal(await r.text(),'/active/assets/app.js');});
 test('robots explicitly disallows indexing',async()=>{const r=await call('/robots.txt');assert.match(await r.text(),/Disallow: \//);});
 test('expiration boundary is inclusive',async()=>{const f=createFetch(registry,()=>Date.parse(registry.active.expires_at));assert.equal((await f(new Request('https://jarvis-digital.pages.dev/active'),env)).status,410);});
+
+test('canonical trailing slash preserves relative build assets without redirect loop',async()=>{const r=await call('/active');assert.equal(r.status,308);assert.equal(r.headers.get('Location'),'https://jarvis-digital.pages.dev/active/');const final=await call('/active/');assert.equal(final.status,200);});
