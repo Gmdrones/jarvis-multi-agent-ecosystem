@@ -111,7 +111,11 @@ def qa_site(dist,dest,video_ids,url=None):
      button=page.get_by_role('button',name=re.compile('abrir menu',re.I))
      if button.count():
       button.first.click();page.keyboard.press('Escape');menu={'tested':True,'expanded_after_escape':button.first.get_attribute('aria-expanded')}
-    rows.append({'name':name,'demo_policy_passed':policy,'mobile_menu':menu,'state':state,'errors':errors,'http':response.status,'embed_images':imgs,'playback':play,'technical_passed':policy and response.status==200 and state['width']==state['scrollWidth'] and state['h1']==1 and state['brokenImages']==0 and not errors and bool(imgs) and all(i>0 for i in imgs) and bool(play) and all(v['progressed'] for v in play)})
+    masks=page.locator('.media-mask').evaluate_all('(es)=>es.map(e=>({overflow:getComputedStyle(e).overflow,iy:parseFloat(getComputedStyle(e).getPropertyValue("--iy")),width:e.clientWidth,height:e.clientHeight}))')
+    broken_anchors=page.locator('a[href^="#"]').evaluate_all('(es)=>es.map(a=>a.getAttribute("href")).filter(h=>h.length>1&&!document.getElementById(h.slice(1)))')
+    crop_pass=len(masks)>=3 and all(m['overflow']=='hidden' and m['iy'] is not None and m['iy']<=-50 for m in masks)
+    menu_pass=name!='mobile' or (menu.get('tested') and menu.get('expanded_after_escape')=='false')
+    rows.append({'name':name,'media_masks':masks,'crop_passed':crop_pass,'broken_anchors':broken_anchors,'demo_policy_passed':policy,'mobile_menu':menu,'state':state,'errors':errors,'http':response.status,'embed_images':imgs,'playback':play,'technical_passed':crop_pass and menu_pass and not broken_anchors and policy and response.status==200 and state['width']==state['scrollWidth'] and state['h1']==1 and state['brokenImages']==0 and not errors and bool(imgs) and all(i>0 for i in imgs) and bool(play) and all(v['progressed'] for v in play)})
     page.close()
    browser.close()
  finally:server.shutdown()
@@ -146,7 +150,7 @@ def publish(job,dest):
  if not gate['eligible_for_production'] or not any(r.get('criterion')=='SEM_SITE_CONFIRMADO' for r in gate['verdict']['reasons']):raise ValueError('GATE_BLOCKED')
  qa=json.loads(path(job['qa']).read_text(encoding='utf8'));review=json.loads((site/'INDEPENDENT_REVIEW.json').read_text(encoding='utf8'))
  current=hashes(site/'dist')
- if not qa.get('technical_passed') or qa.get('dist_hashes')!=current:raise ValueError('STALE_OR_FAILED_QA')
+ if not qa.get('technical_passed') or qa.get('dist_hashes')!=current or qa.get('source_hashes')!=hashes(site/'src'):raise ValueError('STALE_OR_FAILED_QA')
  if review.get('verdict')!='APROVADO' or not review.get('visual_approved') or not review.get('factual_approved') or not review.get('reviewed_by') or not review.get('baseline_compared') or review.get('score',0)<90 or review.get('dist_hashes')!=current:raise ValueError('CURRENT_INDEPENDENT_REVIEW_REQUIRED')
  inspected=review.get('inspected_files',[])
  if not inspected:raise ValueError('INSPECTED_CAPTURES_REQUIRED')
@@ -214,6 +218,9 @@ def main():
     dest=OUT/slug(job['job_id']);dest.mkdir(exist_ok=True);job.update(status='RUNNING',started_at=now());save(request,job)
     try:out={'status':'COMPLETED','result':run_job(job,dest)}
     except Exception as e:out={'status':'FAILED','error_type':type(e).__name__,'error':str(e)[:1600]}
+    if out['status']=='FAILED' and job.get('kind') in ('BUILD_QA','PUBLISH'):
+     try:tell(CREATOR,'EXECUTOR FALHOU: '+str(dest)+' '+out.get('error','')+'. Corrija agora e crie job novo; nao aguarde supervisor. Contrato runtime/EXECUTOR_CONTRACT.md.')
+     except Exception:pass
     out.update(job_id=job['job_id'],kind=job['kind'],finished_at=now());save(result,out);job.update(status=out['status'],finished_at=now());save(request,job);print(json.dumps({'job_id':job['job_id'],'status':out['status']}),flush=True)
     if job.get('notify_hunter'):
      try:tell(HUNTER,'EXECUTOR RESULTADO REAL '+str(result)+'. Leia arquivos originais em '+str(dest)+', reconcilie candidato/gate; nao aguarde supervisor. Escreva proximo job no contrato.')
