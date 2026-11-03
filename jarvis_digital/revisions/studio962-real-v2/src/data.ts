@@ -1,0 +1,1 @@
+export const COMPANY_DATA={name:'Studio 962',address:'Av. das Américas, 3939, Bloco 2, Loja T',phoneDisplay:'(21) 99930-5869',phoneRaw:'5521999305869',whatsappUrl:'https://wa.me/5521999305869',instagramUrl:'https://www.instagram.com/studio962.of/',mapsUrl:'https://www.google.com/maps?cid=1448743517567670519',conceptAsset:{path:'./assets/concept-hair.webp'}};
