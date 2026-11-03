@@ -1,0 +1,48 @@
+{
+  "business": "Ismerim Barbearia",
+  "slug": "ismerim-barbearia",
+  "site_version": "sites/ismerim-v1",
+  "profile_url": "https://www.instagram.com/ismerimbarbearia/",
+  "sources_curated_at": "2026-11-03T19:37:44.489971+00:00",
+  "curation_job_id": "ismerim-embed-curation-v1",
+  "items": [
+    {
+      "id": "hero-media",
+      "shortcode": "DezzylYFtQ0",
+      "kind": "p",
+      "type": "image",
+      "title": "Precisão e espaço exclusivo",
+      "description": "Fotografia real de atendimento e estrutura no Shopping Novo Leblon com enquadramento técnico no terço superior.",
+      "embed_url": "https://www.instagram.com/p/DezzylYFtQ0/embed/",
+      "original_post_url": "https://www.instagram.com/p/DezzylYFtQ0/",
+      "crop_focus_y": 0.12,
+      "aspect_ratio": 1.0
+    },
+    {
+      "id": "gallery-video-1",
+      "shortcode": "DfR_i51AtBS",
+      "kind": "reel",
+      "type": "video",
+      "title": "Atendimento Infantil com Cuidado e Estilo",
+      "description": "Vídeo oficial de atendimento e acolhimento para o público infantil.",
+      "embed_url": "https://www.instagram.com/reel/DfR_i51AtBS/embed/",
+      "original_post_url": "https://www.instagram.com/reel/DfR_i51AtBS/",
+      "crop_focus_y": 0.28,
+      "aspect_ratio": 0.5625
+    },
+    {
+      "id": "gallery-video-2",
+      "shortcode": "DefbKRhRgLq",
+      "kind": "reel",
+      "type": "video",
+      "title": "Corte e Alinhamento de Barba Adulto",
+      "description": "Vídeo oficial de corte masculino e acabamento de barba na navalha.",
+      "embed_url": "https://www.instagram.com/reel/DefbKRhRgLq/embed/",
+      "original_post_url": "https://www.instagram.com/reel/DefbKRhRgLq/",
+      "crop_focus_y": 0.28,
+      "aspect_ratio": 0.5625
+    }
+  ],
+  "authorized_media": [],
+  "usage": "Official public Instagram embeds; no media binaries rehosted"
+}
