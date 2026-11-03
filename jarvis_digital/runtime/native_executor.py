@@ -108,6 +108,7 @@ def evidence_preflight(candidate):
 def qualify(job,dest):
  candidate=json.loads(path(job['candidate']).read_text(encoding='utf-8-sig'))
  evidence_preflight(candidate)
+ geography_preflight(candidate)
  g=PipelineOrchestrator(db_path=B/'state/pipeline.sqlite',workspace_root=ROOT,canonical_gate_path=B.parent/'automacoes/JARVIS-Propostas/lead_presence_gate.py').process_candidate(candidate)
  strict=g['eligible_for_production'] and any(r.get('criterion')=='SEM_SITE_CONFIRMADO' for r in g['verdict'].get('reasons',[]))
  g['mission_eligible']=strict;save(dest/'gate.json',g)
@@ -161,6 +162,7 @@ def build(job,dest):
  if not site.is_relative_to((B/'sites').resolve()) or site.name=='studio-962-real-v3':raise ValueError('NEW_SITE_VERSION_REQUIRED')
  candidate=json.loads(path(job['candidate']).read_text(encoding='utf-8-sig'))
  evidence_preflight(candidate)
+ geography_preflight(candidate)
  gate=PipelineOrchestrator(db_path=B/'state/pipeline.sqlite',workspace_root=ROOT,canonical_gate_path=B.parent/'automacoes/JARVIS-Propostas/lead_presence_gate.py').process_candidate(candidate)
  if not gate['eligible_for_production'] or not any(r.get('criterion')=='SEM_SITE_CONFIRMADO' for r in gate['verdict']['reasons']):raise ValueError('CANONICAL_GATE_BLOCKED')
  base=B/'sites/studio-962-real-v3'
@@ -230,6 +232,7 @@ def run_job(job,dest):
  kind=job.get('kind');slug(job['job_id'])
  if kind.startswith('CAPTURE_'):
   if not isinstance(job.get('urls'),list) or not 1<=len(job['urls'])<=6:raise ValueError('1_TO_6_URLS_REQUIRED')
+ if kind=='ADVANCE_NEIGHBORHOOD':return advance_neighborhood(job,dest)
  if kind=='INIT_SITE':
   site=path(job['site']);base=B/'sites/studio-962-real-v3'
   if not site.is_relative_to((B/'sites').resolve()) or site.name.startswith('studio-962'):raise ValueError('NEW_SITE_ONLY')
@@ -252,17 +255,66 @@ def run_job(job,dest):
  if kind=='BUILD_QA':return build(job,dest)
  if kind=='PUBLISH':return publish(job,dest)
  raise ValueError('UNSUPPORTED_JOB_KIND')
-def advance_research():
- statefile=B/'runtime/research_dispatch.json'
- state=json.loads(statefile.read_text(encoding='utf8')) if statefile.exists() else {}
- if time.time()-state.get('last_attempt_epoch',0)<90:return
- published=set()
+def daily_config():
+ return json.loads((B/'DAILY_RIO_CONFIG.json').read_text(encoding='utf8'))
+def daily_progress():
+ from zoneinfo import ZoneInfo
+ cfg=daily_config();today=datetime.datetime.now(ZoneInfo(cfg['timezone'])).date().isoformat();all_urls=set();daily_urls=set()
  for p in OUT.glob('*.json'):
   try:
-   d=json.loads(p.read_text(encoding='utf8'))
-   if d.get('kind')=='PUBLISH' and d.get('status')=='COMPLETED' and d.get('result',{}).get('status')=='PUBLISHED_TESTED':published.add(d['result']['url'])
+   d=json.loads(p.read_text(encoding='utf8'));r=d.get('result',{})
+   if d.get('kind')!='PUBLISH' or d.get('status')!='COMPLETED' or r.get('status')!='PUBLISHED_TESTED':continue
+   all_urls.add(r['url'])
+   finished=datetime.datetime.fromisoformat(d['finished_at']).astimezone(ZoneInfo(cfg['timezone'])).date().isoformat()
+   if finished==today:daily_urls.add(r['url'])
   except Exception:pass
- if 1+len(published)>=20:return
+ current=cfg['neighborhood_order'][cfg.get('current_neighborhood_index',0)]
+ value={'date':today,'timezone':cfg['timezone'],'daily_target':cfg['daily_target'],'new_published_tested_today':len(daily_urls),'remaining_today':max(0,cfg['daily_target']-len(daily_urls)),'completed_urls_today':sorted(daily_urls),'new_published_total':len(all_urls),'current_neighborhood':current,'last_updated':now(),'baseline_and_revisions_counted':False}
+ save(B/'runtime/DAILY_PROGRESS.json',value);return value
+def geography_preflight(candidate):
+ import unicodedata
+ def fold(v):return ''.join(c for c in unicodedata.normalize('NFKD',str(v)).casefold() if not unicodedata.combining(c)).strip()
+ cfg=daily_config();current=cfg['neighborhood_order'][cfg.get('current_neighborhood_index',0)]
+ if fold(candidate.get('cidade',''))!='rio de janeiro':raise ValueError('CITY_OUTSIDE_AUTHORIZED_RIO_CAMPAIGN')
+ if fold(candidate.get('bairro',''))!=fold(current):raise ValueError('NEIGHBORHOOD_NOT_CURRENT: expected '+current)
+def advance_neighborhood(job,dest):
+ from unicodedata import normalize
+ fold=lambda x:''.join(c for c in normalize('NFKD',str(x)).casefold() if not __import__('unicodedata').combining(c))
+ cfg=daily_config();current=cfg['neighborhood_order'][cfg.get('current_neighborhood_index',0)]
+ if job.get('current_neighborhood')!=current or not job.get('reviewed_by') or not job.get('reason'):raise ValueError('DOCUMENTED_NEIGHBORHOOD_REVIEW_REQUIRED')
+ records=job.get('research_evidence',[])
+ if len(records)<3:raise ValueError('THREE_DISTINCT_ORIGINAL_SEARCHES_REQUIRED')
+ queries=set()
+ for record in records:
+  p=path(record['file'])
+  if hashlib.sha256(p.read_bytes()).hexdigest()!=record['sha256']:raise ValueError('RESEARCH_RECEIPT_HASH_MISMATCH')
+  d=json.loads(p.read_text(encoding='utf8'));u=urllib.parse.urlsplit(d.get('requested_url',''))
+  q=urllib.parse.parse_qs(u.query).get('q',[''])[0]
+  if d.get('status')!='ORIGINAL_BROWSER_CAPTURE' or '/sorry/' in str(d.get('url')) or fold(current) not in fold(q):raise ValueError('NEIGHBORHOOD_SEARCH_NOT_PROVEN')
+  queries.add(q)
+ if len(queries)<3:raise ValueError('DUPLICATE_SEARCHES_NOT_EXHAUSTION')
+ published_slugs={'studio-962'}
+ for receipt_file in OUT.glob('*.json'):
+  try:
+   receipt=json.loads(receipt_file.read_text(encoding='utf8'));r=receipt.get('result',{})
+   if receipt.get('kind')=='PUBLISH' and receipt.get('status')=='COMPLETED' and r.get('status')=='PUBLISHED_TESTED':published_slugs.add(urllib.parse.urlsplit(r['url']).path.strip('/'))
+  except Exception:pass
+ con=PipelineOrchestrator(db_path=B/'state/pipeline.sqlite',workspace_root=ROOT,canonical_gate_path=B.parent/'automacoes/JARVIS-Propostas/lead_presence_gate.py')._get_connection()
+ for row in con.execute('SELECT slug,lead_data_json FROM candidates WHERE eligible_for_production=1'):
+  c=json.loads(row['lead_data_json'])
+  if fold(c.get('bairro',''))==fold(current) and row['slug'] not in published_slugs:
+   con.close();raise ValueError('ELIGIBLE_BACKLOG_REMAINS_IN_CURRENT_NEIGHBORHOOD')
+ con.close()
+ index=cfg.get('current_neighborhood_index',0)+1
+ if index>=len(cfg['neighborhood_order']):raise ValueError('NEIGHBORHOOD_LIST_EXHAUSTED; add next verified Rio neighborhood, not a fabricated city')
+ cfg.update(current_neighborhood_index=index,last_transition_at=now());save(B/'DAILY_RIO_CONFIG.json',cfg)
+ receipt={'from':current,'to':cfg['neighborhood_order'][index],'at':now(),'reason':job['reason'],'reviewed_by':job['reviewed_by'],'research_evidence':records};save(dest/'neighborhood_transition.json',receipt)
+ tell(HUNTER,'BAIRRO ATUAL AVANCOU: '+receipt['to']+'. Continuar meta diaria20 com mesmos gates, qualidade e sem envios.')
+ return receipt
+def advance_research():
+ statefile=B/'runtime/research_dispatch.json';progress=daily_progress()
+ state=json.loads(statefile.read_text(encoding='utf8')) if statefile.exists() else {}
+ if time.time()-state.get('last_attempt_epoch',0)<90 or progress['remaining_today']==0:return
  for p in QUEUE.glob('*.json'):
   try:
    j=json.loads(p.read_text(encoding='utf8'))
@@ -272,10 +324,9 @@ def advance_research():
  t=next((i.get('terminal',{}) for i in feed.get('items',[]) if i.get('terminal',{}).get('id')==HUNTER),None)
  if not t:return
  preview=t.get('preview',[]);preview='\n'.join(preview) if isinstance(preview,list) else preview
- status=bridge.terminal_status(t,preview)[0]
- if status!='READY':return
- state={'last_attempt_epoch':time.time(),'at':now(),'state':'DISPATCHING_NO_BLIND_RETRY','published_tested':1+len(published),'target':20};save(statefile,state)
- prompt='CONTINUACAO AUTONOMA DA FABRICA: '+str(1+len(published))+'/20 sites publicados/testados. Leia runtime/EXECUTOR_CONTRACT.md e continue agora pesquisa de3bons candidatos novos na Barra, com fotos/videos reais e sem site proprio. Nao repetir empresas; consultar registro e recusas. Execute consultas reais exatas de nome+cidade/siteoficial/Googleperfil; Linktree ou Maps nao substituem busca de site e CAPTCHA nao vale como resultado. Use jobs CAPTURE_PUBLIC/CAPTURE_INSTAGRAM e QUALIFY; IDs unicos. Se fonte bloqueada, mantenha pendente e tente outro candidato/fonte publica normal. Nao contornar desafios. Confirme todos os links da bio, unidade/contato/atividade. Registre checkpoint verdadeiro e avance proximo lote ate20, sem esperar proprietario, sem gastos e sem envio comercial. Criador usa INIT_SITE para ferramentas; nunca mover arquivos de outro site.'
+ if bridge.terminal_status(t,preview)[0]!='READY':return
+ state={'last_attempt_epoch':time.time(),'at':now(),'state':'DISPATCHING_NO_BLIND_RETRY','daily_progress':progress};save(statefile,state)
+ prompt='PRODUCAO DIARIA ATIVA: '+str(progress['new_published_tested_today'])+'/20 NOVOS sites hoje '+progress['date']+' Brasilia. Leia DAILY_RIO_PRODUCTION.md, DAILY_RIO_CONFIG.json e runtime/EXECUTOR_CONTRACT.md. Bairro atual: '+progress['current_neighborhood']+'. Continue agora3bons candidatos ineditos sem site proprio e com midia real. Consultar registro e recusas, executar buscas reais exatas de nome+cidade/site/Maps; validar unidade, atividade, contato e todos links da bio. CAPTCHA, resumo ou DOM sintetico nao contam. Use capturas nativas e QUALIFY com evidencia original. Site concluido so PUBLISHED_TESTED com QA real3telas/playback/revisao. Nao contar candidatos/revisoes/sitesantigos. Se fila deste bairro esgotada apos pesquisa documentada, use ADVANCE_NEIGHBORHOOD: ordem Barra da Tijuca, Leblon, Ipanema, Copacabana e demais bairros do Rio. Nao inferir esgotamento de uma consulta. Nao esperar proprietario, sem gastos e sem envios. INIT_SITE para ferramentas, nunca mover arquivos de outro projeto.'
  try:state.update(state='DISPATCHED',receipt=tell(HUNTER,prompt))
  except Exception as e:state.update(state='VERIFY_REQUIRED_NO_AUTOMATIC_RESEND',error=str(e)[:150])
  save(statefile,state)
