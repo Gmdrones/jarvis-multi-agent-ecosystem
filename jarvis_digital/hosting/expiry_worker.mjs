@@ -22,10 +22,14 @@ export function createFetch(registry, clock = Date.now) {
     const demo = registry[slug];
     const expires = Date.parse(demo.expires_at);
     if (demo.active !== true || !Number.isFinite(expires) || clock() >= expires) return reply('Demonstração indisponível ou expirada.', 410);
+    if (parts.length === 1 && !path.endsWith('/')) {
+      const canonical = new URL(request.url); canonical.pathname += '/';
+      return secure(Response.redirect(canonical.toString(), 308));
+    }
     const requested = parts.length === 1 ? 'index.html' : parts.slice(1).join('/');
     if (!Object.hasOwn(demo.files || {}, requested)) return reply('Not found', 404);
     const assetURL = new URL(request.url);
-    assetURL.pathname = '/' + slug + '/' + requested;
+    assetURL.pathname = '/' + slug + '/' + (requested === 'index.html' ? '' : requested);
     return secure(await env.ASSETS.fetch(new Request(assetURL, request)));
   };
 }
