@@ -51,6 +51,7 @@ def capture_public(job,dest):
    try:
     r=page.goto(url,wait_until='domcontentloaded',timeout=25000);page.wait_for_timeout(2200)
     row.update(url=page.url,http=r.status if r else None,title=page.title(),text=page.locator('body').inner_text(timeout=4000),links=page.locator('a[href]').evaluate_all('(es)=>es.map(e=>({href:e.href,text:e.innerText}))'))
+    if '/sorry/' in page.url or 'Our systems have detected unusual traffic' in row['text']:row['status']='CHALLENGE_NOT_SEARCH_RESULTS'
     (dest/(str(i)+'.html')).write_text(page.content(),encoding='utf8');page.screenshot(path=str(dest/(str(i)+'.png')),full_page='google.com/maps' not in page.url)
    except Exception as e:row.update(status='CAPTURE_FAILED',error=str(e)[:400])
    save(dest/(str(i)+'.json'),row);rows.append(row);page.close()
@@ -70,8 +71,27 @@ def capture_instagram(job,dest):
    if f.is_file():shutil.copy2(f,dest/(str(i)+'.png'));break
   rows.append({'url':url,'captured_at':now(),'screenshot_available':(dest/(str(i)+'.png')).exists(),'status':'SOURCE_UNAVAILABLE' if 'Esta página não está disponível' in snapshot else 'NATIVE_PORTAL_ORIGINAL','rights':'PUBLIC_REFERENCE_OR_OFFICIAL_EMBED_ONLY','private_data_accessed':False})
  return {'captures':rows,'hashes':hashes(dest),'automatic_qualification':False}
+def evidence_preflight(candidate):
+ def walk(value):
+  if isinstance(value,dict):
+   if all(k in value for k in ('file','url','sha256')):
+    p=Path(value['file']);p=p if p.is_absolute() else ROOT/p;p=p.resolve()
+    if not p.is_relative_to(ROOT.resolve()) or not p.is_file():raise ValueError('EVIDENCE_FILE_UNAVAILABLE')
+    content=p.read_text(encoding='utf8',errors='replace').lower()
+    blocked=['our systems have detected unusual traffic','esta página não está disponível','verify you are human','checking your browser before accessing']
+    if any(marker in content for marker in blocked):raise ValueError('EVIDENCE_IS_CHALLENGE_OR_UNAVAILABLE: '+str(p))
+    meta=p.with_suffix('.json')
+    if p.suffix=='.html' and meta.is_file():
+     m=json.loads(meta.read_text(encoding='utf8'));url=str(m.get('url',''))
+     if '/sorry/' in url or m.get('status')=='CAPTURE_FAILED' or m.get('http',200) is None or m.get('http',200)>=400:raise ValueError('EVIDENCE_CAPTURE_FAILED: '+str(p))
+   for v in value.values():walk(v)
+  elif isinstance(value,list):
+   for v in value:walk(v)
+ walk(candidate.get('presence_audit',{}))
+
 def qualify(job,dest):
  candidate=json.loads(path(job['candidate']).read_text(encoding='utf-8-sig'))
+ evidence_preflight(candidate)
  g=PipelineOrchestrator(db_path=B/'state/pipeline.sqlite',workspace_root=ROOT,canonical_gate_path=B.parent/'automacoes/JARVIS-Propostas/lead_presence_gate.py').process_candidate(candidate)
  strict=g['eligible_for_production'] and any(r.get('criterion')=='SEM_SITE_CONFIRMADO' for r in g['verdict'].get('reasons',[]))
  g['mission_eligible']=strict;save(dest/'gate.json',g)
@@ -124,6 +144,7 @@ def build(job,dest):
  site=path(job['site'])
  if not site.is_relative_to((B/'sites').resolve()) or site.name=='studio-962-real-v3':raise ValueError('NEW_SITE_VERSION_REQUIRED')
  candidate=json.loads(path(job['candidate']).read_text(encoding='utf-8-sig'))
+ evidence_preflight(candidate)
  gate=PipelineOrchestrator(db_path=B/'state/pipeline.sqlite',workspace_root=ROOT,canonical_gate_path=B.parent/'automacoes/JARVIS-Propostas/lead_presence_gate.py').process_candidate(candidate)
  if not gate['eligible_for_production'] or not any(r.get('criterion')=='SEM_SITE_CONFIRMADO' for r in gate['verdict']['reasons']):raise ValueError('CANONICAL_GATE_BLOCKED')
  base=B/'sites/studio-962-real-v3'
