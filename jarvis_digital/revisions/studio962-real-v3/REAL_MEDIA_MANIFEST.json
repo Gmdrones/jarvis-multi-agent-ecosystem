@@ -25,5 +25,33 @@
     "Embedding is not permission to download/rehost source files",
     "Availability/playback depends on Instagram",
     "No final visual approval inherited from previous version"
-  ]
+  ],
+  "curation_evidence": {
+    "session": "Independent JARVIS Digital profile",
+    "job_id": "studio962-20261103",
+    "observed_at": "2026-11-03T17:42:42.878646+00:00",
+    "result": "COLLECTED_REFERENCES",
+    "raw_sources": [
+      {
+        "url": "https://www.instagram.com/studio962.of/",
+        "file": "0-main.html",
+        "sha256": "51f779398978e7bf540dc81bc736805190efddb95611536fdb8e189ad293b5cf"
+      },
+      {
+        "url": "https://www.instagram.com/p/DeUW2npkfrx/",
+        "file": "1-main.html",
+        "sha256": "4793cefe89b50df504fd9088e8f408e00cb838e165a4b57804f58ef08d35fd3f"
+      },
+      {
+        "url": "https://www.instagram.com/reel/DfFwV_Zv2AM/",
+        "file": "2-main.html",
+        "sha256": "aaca0767a97e1e94a57933d0f8ffe39382b20b3ab15c2167f05ed99595476eb9"
+      },
+      {
+        "url": "https://www.instagram.com/p/Dd61KmhFXCc/",
+        "file": "3-main.html",
+        "sha256": "2c6035f2c0296043a4337d1823f490bbe005bc90608df3641bad6bfd720dde2f"
+      }
+    ]
+  }
 }
