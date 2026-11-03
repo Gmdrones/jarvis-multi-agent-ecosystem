@@ -1,0 +1,29 @@
+{
+  "observed_at": "2026-11-03",
+  "profile": "https://www.instagram.com/studio962.of/",
+  "mode": "OFFICIAL_PUBLIC_EMBED",
+  "native_download_or_rehosting_authorized": false,
+  "synthetic_media_in_new_page": false,
+  "posts": [
+    {
+      "url": "https://www.instagram.com/p/DeUW2npkfrx/",
+      "type": "PHOTO_CAROUSEL",
+      "embed_option_observed": true
+    },
+    {
+      "url": "https://www.instagram.com/reel/DfFwV_Zv2AM/",
+      "type": "REEL",
+      "embed_option_observed": true
+    },
+    {
+      "url": "https://www.instagram.com/p/Dd61KmhFXCc/",
+      "type": "CAROUSEL_WITH_VIDEO",
+      "embed_rendered_anonymously": true
+    }
+  ],
+  "limitations": [
+    "Embedding is not permission to download/rehost source files",
+    "Availability/playback depends on Instagram",
+    "No final visual approval inherited from previous version"
+  ]
+}
