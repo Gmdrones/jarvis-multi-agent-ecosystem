@@ -18,6 +18,10 @@ def run(url,output):
    page.on('console',lambda msg:errors.append(msg.text) if msg.type=='error' else None)
    page.on('response',lambda response:failed.append({'url':response.url,'status':response.status}) if response.status>=400 else None)
    response=page.goto(url,wait_until='networkidle',timeout=30000)
+   total_height=page.evaluate('() => document.documentElement.scrollHeight')
+   for y in range(0,total_height,max(200,height//2)):
+    page.evaluate('(y) => window.scrollTo(0,y)',y)
+    page.wait_for_timeout(60)
    for img in page.locator('img').all():
     if img.is_visible():
      img.scroll_into_view_if_needed()
@@ -25,6 +29,7 @@ def run(url,output):
    page.evaluate('() => window.scrollTo(0,0)')
    state=page.evaluate('''() => ({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,h1:document.querySelectorAll('h1').length,lang:document.documentElement.lang,images:[...document.images].map(i=>({src:i.currentSrc,loaded:i.complete&&i.naturalWidth>0,alt:i.getAttribute('alt')})),links:[...document.querySelectorAll('a[href]')].map(a=>({href:a.getAttribute('href'),label:a.textContent.trim()||a.getAttribute('aria-label')||'',targetExists:!a.getAttribute('href').startsWith('#')||a.getAttribute('href')==='#'||!!document.getElementById(a.getAttribute('href').slice(1))})),navigationMs:performance.getEntriesByType('navigation')[0]?.duration||null})''')
    page.keyboard.press('Tab');state['keyboard_focus']=page.evaluate('() => ({tag:document.activeElement.tagName,label:document.activeElement.textContent.trim().slice(0,100)})')
+   page.evaluate('() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); }')
    shot=output/('screenshot_home_'+name+'.png');page.screenshot(path=str(shot),full_page=True)
    issues=[]
    if not response or response.status!=200:issues.append('HTTP_NOT_200')
